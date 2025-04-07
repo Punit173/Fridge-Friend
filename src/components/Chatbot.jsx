@@ -1,11 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { differenceInDays, format } from 'date-fns';
+import { supabase } from './supabase';
 
-const Chatbot = ({ products }) => {
+const Chatbot = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState([]);
     const [inputMessage, setInputMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [products, setProducts] = useState([]);
+    const [isFetching, setIsFetching] = useState(true);
     const messagesEndRef = useRef(null);
     const genAI = new GoogleGenerativeAI("AIzaSyCJ9B9D93cw0ZPIakN5kQpT0IIkI5VOZwI");
 
@@ -17,7 +21,52 @@ const Chatbot = ({ products }) => {
         scrollToBottom();
     }, [messages]);
 
+    useEffect(() => {
+        fetchProducts();
+    }, []);
+
+    const fetchProducts = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                setIsFetching(false);
+                return;
+            }
+
+            const { data, error } = await supabase
+                .from('Product Data')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('expiry_date', { ascending: true });
+
+            if (error) throw error;
+
+            const formattedData = data.map(item => ({
+                ...item,
+                remaining_days: differenceInDays(new Date(item.expiry_date), new Date()),
+                formatted_expiry: format(new Date(item.expiry_date), 'MMM dd, yyyy')
+            }));
+
+            setProducts(formattedData);
+        } catch (error) {
+            console.error('Error fetching products:', error);
+        } finally {
+            setIsFetching(false);
+        }
+    };
+
     const generateContext = () => {
+        if (isFetching) {
+            return `You are a helpful assistant for a fridge management app. I'm currently loading the user's fridge data.
+            
+            You can help them with:
+            1. General food storage best practices
+            2. Food safety information
+            3. Common fridge organization tips
+            
+            Please provide concise and helpful responses.`;
+        }
+
         if (!products || !Array.isArray(products) || products.length === 0) {
             return `You are a helpful assistant for a fridge management app. The user currently has no products in their fridge.
             
@@ -33,10 +82,18 @@ const Chatbot = ({ products }) => {
         const productList = products.map(product => ({
             name: product.product_name,
             quantity: product.quantity,
-            expiryDate: product.expiry_date,
-            remainingDays: product.remaining_days
+            expiryDate: product.formatted_expiry,
+            remainingDays: product.remaining_days,
+            status: product.remaining_days < 0
+                ? 'Expired'
+                : product.remaining_days <= 1
+                    ? 'Expiring Today'
+                    : product.remaining_days <= 7
+                        ? 'Expiring Soon'
+                        : 'Fresh'
         }));
 
+        console.log(productList)
         return `You are a helpful assistant for a fridge management app. The user has the following products in their fridge:
         ${JSON.stringify(productList, null, 2)}
         
@@ -47,7 +104,7 @@ const Chatbot = ({ products }) => {
         4. Providing food storage tips
         5. Answering questions about food safety and shelf life
         
-        Please provide concise and helpful responses. Don't give your response in bold.remove all asteriks`;
+        Please provide concise and helpful responses. When mentioning products, use their exact names from the list above. Remove asteriks from response and don't make anythiing bold`;
     };
 
     const handleSendMessage = async () => {
