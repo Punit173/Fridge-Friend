@@ -508,13 +508,14 @@ const Dashboard = () => {
   }
 
   const handleFormSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        throw new Error('User not authenticated')
+        throw new Error('User not authenticated');
       }
-
+  
+      // Insert the new product into the database
       const { data, error } = await supabase
         .from('Product Data')
         .insert([{
@@ -524,23 +525,38 @@ const Dashboard = () => {
           expiry_date: formData.expiryDate,
           user_id: user.id
         }])
-
-      if (error) throw error
-
-      fetchPurchases()
-      setShowImageModal(false)
-      setShowAddModal(false)
+        .select();
+  
+      if (error) throw error;
+  
+      // Fetch updated purchases to refresh the table
+      await fetchPurchases();
+  
+      // Check if the newly added product's expiry date is 1 day or less
+      const remainingDays = differenceInDays(new Date(formData.expiryDate), new Date());
+      if (remainingDays <= 1) {
+        await sendExpiryNotification({
+          product_name: formData.productName,
+          quantity: formData.quantity,
+          formatted_expiry: format(new Date(formData.expiryDate), 'MMM dd, yyyy'),
+          remaining_days: remainingDays
+        });
+      }
+  
+      // Reset form and close modal
+      setShowImageModal(false);
+      setShowAddModal(false);
       setFormData({
         productName: '',
         quantity: '',
         purchaseDate: '',
         expiryDate: ''
-      })
-      setSelectedImage(null)
+      });
+      setSelectedImage(null);
     } catch (error) {
-      console.error('Error adding product:', error.message)
+      console.error('Error adding product:', error.message);
     }
-  }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -826,9 +842,9 @@ const Dashboard = () => {
 
   const sendExpiryNotification = async (item) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+  
       const emailTemplate = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
           <h2 style="color: #dc3545; text-align: center;">⚠️ Expiry Alert ⚠️</h2>
@@ -845,82 +861,169 @@ const Dashboard = () => {
             <p style="font-size: 16px; margin-top: 20px;">Best regards,<br>FridgeFriend Team</p>
           </div>
         </div>
-      `
-
-      const { error } = await supabase.functions.invoke('send-email', {
-        body: {
+      `;
+  
+      const response = await fetch('http://localhost:5000/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           to: user.email,
           subject: `⚠️ Expiry Alert: ${item.product_name}`,
-          html: emailTemplate
-        }
-      })
-
-      if (error) throw error
+          html: emailTemplate,
+        }),
+      });
+  
+      const result = await response.json();
+      console.log('Email API Response:', result);
+  
+      if (result.success) {
+        console.log('Email sent successfully:', result.messageId);
+      } else {
+        console.error('Failed to send email:', result.error);
+      }
     } catch (error) {
-      console.error('Error sending email notification:', error)
+      console.error('Error sending email notification:', error);
     }
-  }
-
+  };
+  const sendTableToEmail = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        alert('User not authenticated');
+        return;
+      }
+  
+      // Generate the HTML content for the email
+      const tableRows = purchases.map(
+        (item) => `
+          <tr>
+            <td>${item.product_name}</td>
+            <td>${item.quantity}</td>
+            <td>${item.formatted_expiry}</td>
+            <td>${item.remaining_days} days</td>
+          </tr>
+        `
+      ).join('');
+  
+      const emailContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
+          <h2 style="color: #3b82f6; text-align: center;">📊 FridgeFriend Report</h2>
+          <h3>Your Items</h3>
+          <table border="1" style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Expiry Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
+          <h3>Charts Overview</h3>
+          <p>Days Until Expiry and Product Quantities charts are available in your dashboard.</p>
+          <p>Best regards,<br>FridgeFriend Team</p>
+        </div>
+      `;
+  
+      // Send the email
+      const response = await fetch('http://localhost:5000/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: user.email,
+          subject: '📊 Your FridgeFriend Report',
+          html: emailContent,
+        }),
+      });
+  
+      const result = await response.json();
+      if (result.success) {
+        alert('Email sent successfully!');
+      } else {
+        console.error('Failed to send email:', result.error);
+        alert('Failed to send email. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error sending email:', error);
+      alert('An error occurred while sending the email.');
+    }
+  };
   const handleModelSubmit = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        throw new Error('User not authenticated')
+        throw new Error('User not authenticated');
       }
 
+      // Validate expiry date
       if (!modelResults.suggestedExpiry) {
-        throw new Error('Please select an expiry date')
+        throw new Error('Please select an expiry date');
       }
 
-      const currentDate = new Date().toISOString().split('T')[0]
+      // Get current date in YYYY-MM-DD format
+      const currentDate = new Date().toISOString().split('T')[0];
 
-      const detectedItem = modelResults.condition.replace('Detected: ', '').trim()
+      // Extract the detected item name from modelResults.condition
+      const detectedItem = modelResults.condition.replace('Detected: ', '').trim();
 
+      // Prepare the data for insertion
       const newItem = {
         product_name: detectedItem || 'Unknown Item',
         quantity: parseInt(formData.quantity) || 1,
         purchase_date: currentDate,
         expiry_date: modelResults.suggestedExpiry,
-        user_id: user.id
-      }
+        user_id: user.id,
+      };
 
+      // Insert the data into the 'Product Data' table
       const { data, error } = await supabase
         .from('Product Data')
         .insert([newItem])
-        .select()
+        .select();
 
-      if (error) throw error
+      if (error) throw error;
 
-      alert('Item added successfully to the database!')
+      // Show success message
+      alert('Item added successfully to the database!');
 
-      await fetchPurchases()
+      // Fetch updated purchases to refresh the table
+      await fetchPurchases();
 
-      const expiringItems = purchases.filter(item => item.remaining_days <= 1)
+      // Check if the newly added product's expiry date is 1 day or less
+      const remainingDays = differenceInDays(new Date(newItem.expiry_date), new Date());
+      if (remainingDays <= 1) {
+        await sendExpiryNotification(newItem); // Send email immediately
+      }
+
+      // Check for other items expiring in 1 day or less
+      const expiringItems = purchases.filter(item => item.remaining_days <= 1);
       if (expiringItems.length > 0) {
-        expiringItems.forEach(item => sendExpiryNotification(item))
+        expiringItems.forEach(item => sendExpiryNotification(item));
       }
 
       // Reset form and close modal
-      setShowModelModal(false)
+      setShowModelModal(false);
       setFormData({
         productName: '',
         quantity: '',
         purchaseDate: '',
-        expiryDate: ''
-      })
-      setSelectedImage(null)
+        expiryDate: '',
+      });
+      setSelectedImage(null);
       setModelResults({
         condition: '',
         confidence: 0,
         shelfLife: '',
-        suggestedExpiry: ''
-      })
-
+        suggestedExpiry: '',
+      });
     } catch (error) {
-      console.error('Error adding product:', error.message)
-      alert(`Error adding product: ${error.message}`)
+      console.error('Error adding product:', error.message);
+      alert(`Error adding product: ${error.message}`);
     }
-  }
+  };
 
   const handleDelete = async (id) => {
     try {
@@ -949,6 +1052,7 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gray-900">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
+        {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-white">My Fridge</h1>
@@ -965,6 +1069,7 @@ const Dashboard = () => {
           </button>
         </div>
 
+        {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-gray-800 p-6 rounded-xl shadow-sm">
             <div className="flex items-center justify-between">
@@ -1015,6 +1120,7 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <div className="bg-gray-800 p-6 rounded-xl shadow-sm hover:shadow-lg transition-shadow duration-300">
             <h2 className="text-xl font-semibold text-white mb-4">Days Until Expiry</h2>
@@ -1061,10 +1167,10 @@ const Dashboard = () => {
                   />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#ffffff',
+                      backgroundColor: '#1F2937',
                       border: '1px solid #374151',
                       borderRadius: '8px',
-                      color: '#000000'
+                      color: '#F3F4F6'
                     }}
                     cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
                     formatter={(value) => [`${value} days`, 'Remaining']}
@@ -1126,7 +1232,7 @@ const Dashboard = () => {
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#ffffff',
+                      backgroundColor: '#1F2937',
                       border: '1px solid #374151',
                       borderRadius: '8px',
                       color: '#F3F4F6'
@@ -1145,10 +1251,17 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* Items Table */}
         <div className="bg-gray-800 rounded-xl shadow-sm overflow-hidden">
-          <div className="p-6">
-            <h2 className="text-xl font-semibold text-white">Your Items</h2>
-          </div>
+        <div className="flex justify-between items-center p-6">
+  <h2 className="text-xl font-semibold text-white">Your Items</h2>
+  <button
+    onClick={sendTableToEmail}
+    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+  >
+    Send to My Email
+  </button>
+</div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-700">
               <thead className="bg-gray-700">
