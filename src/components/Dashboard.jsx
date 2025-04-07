@@ -7,6 +7,7 @@ import { createWorker } from 'tesseract.js'
 import * as tf from '@tensorflow/tfjs'
 import * as cocoSsd from '@tensorflow-models/coco-ssd'
 import '@tensorflow/tfjs-backend-webgl'
+import Chatbot from './Chatbot.jsx'
 import { useNavigate } from 'react-router-dom'
 
 const Dashboard = () => {
@@ -1051,8 +1052,8 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gray-900">
       <Navbar />
+      <Chatbot />
       <div className="container mx-auto px-4 py-8">
-        {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-white">My Fridge</h1>
@@ -1069,7 +1070,6 @@ const Dashboard = () => {
           </button>
         </div>
 
-        {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-gray-800 p-6 rounded-xl shadow-sm">
             <div className="flex items-center justify-between">
@@ -1120,7 +1120,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <div className="bg-gray-800 p-6 rounded-xl shadow-sm hover:shadow-lg transition-shadow duration-300">
             <h2 className="text-xl font-semibold text-white mb-4">Days Until Expiry</h2>
@@ -1251,7 +1250,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Items Table */}
         <div className="bg-gray-800 rounded-xl shadow-sm overflow-hidden">
         <div className="flex justify-between items-center p-6">
   <h2 className="text-xl font-semibold text-white">Your Items</h2>
@@ -1337,7 +1335,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Modals */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
           <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
