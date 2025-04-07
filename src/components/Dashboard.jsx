@@ -863,7 +863,7 @@ const Dashboard = () => {
         </div>
       `;
   
-      const response = await fetch('http://localhost:5000/send-email', {
+      const response = await fetch('https://dayzero-backend.onrender.com/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -929,7 +929,7 @@ const Dashboard = () => {
       `;
   
       // Send the email
-      const response = await fetch('http://localhost:5000/send-email', {
+      const response = await fetch('https://dayzero-backend.onrender.com/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
