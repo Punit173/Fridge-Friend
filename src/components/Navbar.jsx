@@ -173,6 +173,7 @@ const Navbar = () => {
         </div>
       </div>
       <div className='h-1 mt-1 blur-sm bg-lime-300'></div>
+      /
     </nav>
   )
 }
