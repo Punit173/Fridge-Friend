@@ -23,9 +23,9 @@
 | Inventory Dashboard | Expiry Alerts | Recipe Suggestions |
 | ------------------- | ------------- | ------------------ |
 
-| ![image](https://github.com/user-attachments/assets/9174bc6f-e64a-486f-952c-cd0ad0d60e14)
-| ![image](https://github.com/user-attachments/assets/d5f0a7b1-c811-476f-9cff-f6055a8efd44)
-| ![image](https://github.com/user-attachments/assets/d9e35886-ac99-41a0-a8f8-b0aa6b7a98c1)
+![image](https://github.com/user-attachments/assets/9174bc6f-e64a-486f-952c-cd0ad0d60e14)
+![image](https://github.com/user-attachments/assets/d5f0a7b1-c811-476f-9cff-f6055a8efd44)
+![image](https://github.com/user-attachments/assets/d9e35886-ac99-41a0-a8f8-b0aa6b7a98c1)
 
 ## 🧪 Getting Started (Development)
 
