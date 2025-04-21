@@ -132,14 +132,14 @@ const Recipe = () => {
       ${availableIngredients}
       
       Please provide a detailed recipe that uses as many of my available ingredients as possible. If some ingredients are missing, suggest alternatives or mark them as optional. Include the following sections in markdown format:
-      1. Ingredients (with measurements)
-      2. Instructions (step by step)
-      3. Cooking time
-      4. Serving size
-      5. Tips and variations (if any)
-      6. Note which ingredients from my inventory are being used and which ones need to be purchased
+      1. Note which ingredients from my inventory are being used and which ones need to be purchased
+      2. Ingredients (with measurements)
+      3. Instructions (step by step)
+      4. Cooking time
+      5. Serving size
+      6. Tips and variations (if any)
       
-      Format the response in proper markdown with appropriate headings and lists.`
+      Format the response in proper markdown with appropriate headings and lists. Don't provide any dump to this just answer whatever is asked, make it more designer in markdown don't write "This recipe focuses on using the orange and sugar you already have to create a flavorful simple syrup that elevates a basic cake. Since you're missing key cake ingredients, we'll treat this as a starting point and outline what you'll need to purchase......"`
 
       const recipeResult = await generateResponse(recipePrompt)
       setRecipe(recipeResult)

@@ -7,8 +7,12 @@ import { createWorker } from 'tesseract.js'
 import * as tf from '@tensorflow/tfjs'
 import * as cocoSsd from '@tensorflow-models/coco-ssd'
 import '@tensorflow/tfjs-backend-webgl'
-import Chatbot from './Chatbot.jsx'
 import { useNavigate } from 'react-router-dom'
+import Chatbot from './Chatbot'
+import { jsPDF } from 'jspdf'
+import 'jspdf-autotable'
+// import * as jsPDF from 'jspdf' 
+// import * as {autoTable} from 'jspdf-autotable'
 
 const Dashboard = () => {
   const navigate = useNavigate()
@@ -515,7 +519,7 @@ const Dashboard = () => {
       if (!user) {
         throw new Error('User not authenticated');
       }
-  
+
       // Insert the new product into the database
       const { data, error } = await supabase
         .from('Product Data')
@@ -527,12 +531,12 @@ const Dashboard = () => {
           user_id: user.id
         }])
         .select();
-  
+
       if (error) throw error;
-  
+
       // Fetch updated purchases to refresh the table
       await fetchPurchases();
-  
+
       // Check if the newly added product's expiry date is 1 day or less
       const remainingDays = differenceInDays(new Date(formData.expiryDate), new Date());
       if (remainingDays <= 1) {
@@ -543,7 +547,7 @@ const Dashboard = () => {
           remaining_days: remainingDays
         });
       }
-  
+
       // Reset form and close modal
       setShowImageModal(false);
       setShowAddModal(false);
@@ -620,6 +624,162 @@ const Dashboard = () => {
       shelfLifeReduction
     }
   }
+
+
+  const downloadReport = () => {
+    const doc = new jsPDF()
+    let yPos = 15 // Initialize yPos at the start
+
+    // Add title
+    doc.setFontSize(20)
+    doc.text('Fridge Inventory Report', 14, yPos)
+    yPos += 15
+
+    // Add date
+    doc.setFontSize(12)
+    doc.text(`Generated on: ${format(new Date(), 'MMMM dd, yyyy')}`, 14, yPos)
+    yPos += 15
+
+    // Add summary statistics
+    doc.setFontSize(14)
+    doc.text('Summary Statistics', 14, yPos)
+    yPos += 10
+    doc.setFontSize(12)
+    doc.text(`Total Items: ${purchases.length}`, 14, yPos)
+    yPos += 10
+    doc.text(`Expiring Soon: ${purchases.filter(item => item.remaining_days <= 1).length}`, 14, yPos)
+    yPos += 10
+    doc.text(`Average Shelf Life: ${purchases.length > 0 ? Math.round(purchases.reduce((acc, item) => acc + item.remaining_days, 0) / purchases.length) : 0} days`, 14, yPos)
+    yPos += 20
+
+    // Add expiring items section
+    const expiringItems = purchases.filter(item => item.remaining_days <= 1)
+    if (expiringItems.length > 0) {
+      doc.setFontSize(14)
+      doc.setTextColor(220, 53, 69) // Red color for warning
+      doc.text('⚠️ Items Expiring Soon ⚠️', 14, yPos)
+      doc.setTextColor(0, 0, 0) // Reset to black
+      yPos += 10
+
+      expiringItems.forEach(item => {
+        if (yPos > 250) { // Check if we need a new page
+          doc.addPage()
+          yPos = 20
+        }
+
+        doc.setFontSize(12)
+        doc.text(`Item: ${item.product_name}`, 14, yPos)
+        yPos += 10
+        doc.text(`Quantity: ${item.quantity}`, 14, yPos)
+        yPos += 10
+        doc.text(`Expiry Date: ${item.formatted_expiry}`, 14, yPos)
+        yPos += 10
+        doc.text(`Days Remaining: ${item.remaining_days} day(s)`, 14, yPos)
+        yPos += 10
+
+        // Add a separator line
+        doc.setDrawColor(200, 200, 200)
+        doc.line(14, yPos, 196, yPos)
+        yPos += 15
+      })
+    }
+
+    // Add complete inventory table
+    if (yPos > 250) { // Check if we need a new page
+      doc.addPage()
+      yPos = 20
+    }
+
+    doc.setFontSize(14)
+    doc.text('Complete Inventory', 14, yPos)
+    yPos += 15
+
+    // Table settings
+    const startX = 14
+    const colWidths = [60, 20, 40, 30, 30] // Width of each column
+    const rowHeight = 10
+    const headerHeight = 10
+    const fontSize = 10
+
+    // Draw table header
+    doc.setFontSize(fontSize)
+    doc.setFont(undefined, 'bold')
+    doc.setTextColor(255, 255, 255)
+    doc.setFillColor(41, 128, 185)
+
+    const headers = ['Product', 'Quantity', 'Expiry Date', 'Status', 'Days Remaining']
+    let currentX = startX
+
+    // Draw header cells
+    headers.forEach((header, index) => {
+      doc.rect(currentX, yPos, colWidths[index], headerHeight, 'F')
+      doc.text(header, currentX + 5, yPos + 7)
+      currentX += colWidths[index]
+    })
+
+    yPos += headerHeight
+    doc.setFont(undefined, 'normal')
+    doc.setTextColor(0, 0, 0)
+
+    // Draw table rows
+    purchases.forEach((purchase, rowIndex) => {
+      if (yPos > 250) {
+        doc.addPage()
+        yPos = 20
+      }
+
+      // Alternate row background
+      if (rowIndex % 2 === 0) {
+        doc.setFillColor(245, 245, 245)
+        doc.rect(startX, yPos, colWidths.reduce((a, b) => a + b), rowHeight, 'F')
+      }
+
+      // Set status color
+      let statusColor = [40, 167, 69] // Green for Fresh
+      if (purchase.remaining_days < 0) {
+        statusColor = [220, 53, 69] // Red for Expired
+      } else if (purchase.remaining_days <= 1) {
+        statusColor = [255, 193, 7] // Yellow for Expiring Soon
+      } else if (purchase.remaining_days <= 7) {
+        statusColor = [255, 193, 7] // Yellow for Expiring in a Week
+      }
+
+      // Draw row data
+      currentX = startX
+      const rowData = [
+        purchase.product_name,
+        purchase.quantity.toString(),
+        purchase.formatted_expiry,
+        purchase.remaining_days < 0 ? 'Expired' :
+          purchase.remaining_days <= 1 ? 'Expiring Soon' :
+            purchase.remaining_days <= 7 ? 'Expiring in a Week' : 'Fresh',
+        purchase.remaining_days < 0 ? 'Expired' : `${purchase.remaining_days} days`
+      ]
+
+      rowData.forEach((text, index) => {
+        // Draw cell border
+        doc.setDrawColor(200, 200, 200)
+        doc.rect(currentX, yPos, colWidths[index], rowHeight)
+
+        // Set text color for status column
+        if (index === 3) {
+          doc.setTextColor(...statusColor)
+        } else {
+          doc.setTextColor(0, 0, 0)
+        }
+
+        // Add text
+        doc.text(text, currentX + 5, yPos + 7)
+        currentX += colWidths[index]
+      })
+
+      yPos += rowHeight
+    })
+
+    // Save the PDF
+    doc.save('fridge-inventory-report.pdf')
+  }
+
 
   const handleModelDetection = async (event) => {
     const file = event.target.files[0]
@@ -845,7 +1005,7 @@ const Dashboard = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-  
+
       const emailTemplate = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
           <h2 style="color: #dc3545; text-align: center;">⚠️ Expiry Alert ⚠️</h2>
@@ -863,7 +1023,7 @@ const Dashboard = () => {
           </div>
         </div>
       `;
-  
+
       const response = await fetch('https://dayzero-backend.onrender.com/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -873,10 +1033,10 @@ const Dashboard = () => {
           html: emailTemplate,
         }),
       });
-  
+
       const result = await response.json();
       console.log('Email API Response:', result);
-  
+
       if (result.success) {
         console.log('Email sent successfully:', result.messageId);
       } else {
@@ -893,7 +1053,7 @@ const Dashboard = () => {
         alert('User not authenticated');
         return;
       }
-  
+
       // Generate the HTML content for the email
       const tableRows = purchases.map(
         (item) => `
@@ -905,7 +1065,7 @@ const Dashboard = () => {
           </tr>
         `
       ).join('');
-  
+
       const emailContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
           <h2 style="color: #3b82f6; text-align: center;">📊 FridgeFriend Report</h2>
@@ -928,7 +1088,7 @@ const Dashboard = () => {
           <p>Best regards,<br>FridgeFriend Team</p>
         </div>
       `;
-  
+
       // Send the email
       const response = await fetch('https://dayzero-backend.onrender.com/send-email', {
         method: 'POST',
@@ -939,7 +1099,7 @@ const Dashboard = () => {
           html: emailContent,
         }),
       });
-  
+
       const result = await response.json();
       if (result.success) {
         alert('Email sent successfully!');
@@ -1251,15 +1411,23 @@ const Dashboard = () => {
         </div>
 
         <div className="bg-gray-800 rounded-xl shadow-sm overflow-hidden">
-        <div className="flex justify-between items-center p-6">
-  <h2 className="text-xl font-semibold text-white">Your Items</h2>
-  <button
-    onClick={sendTableToEmail}
-    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-  >
-    Send to My Email
-  </button>
-</div>
+          <div className="flex justify-between items-center p-6">
+            <h2 className="text-xl font-semibold text-white">Your Items</h2>
+            <div className='flex gap-2'>
+              <button
+                onClick={sendTableToEmail}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Send to My Email
+              </button>
+              <button
+                onClick={downloadReport}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Download Report
+              </button>
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-700">
               <thead className="bg-gray-700">
@@ -1648,7 +1816,7 @@ const Dashboard = () => {
                   Stop Camera
                 </button>
               )}
-          
+
               <button
                 onClick={() => {
                   stopCamera()
