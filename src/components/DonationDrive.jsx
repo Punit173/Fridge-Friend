@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import { supabase } from './supabase'
+import Chatbot from './Chatbot'
 
 // Fix for default marker icons in Leaflet
 delete L.Icon.Default.prototype._getIconUrl
@@ -138,6 +139,7 @@ const DonationDrive = () => {
   return (
     <div className="min-h-screen bg-gray-900">
       <Navbar />
+      <Chatbot/>
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Map Section */}

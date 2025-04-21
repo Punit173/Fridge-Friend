@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import Navbar from './Navbar'
 import { supabase } from './supabase'
 import { FaUsers, FaLeaf, FaChartLine, FaPlus, FaCheck, FaTimes } from 'react-icons/fa'
+import Chatbot from './Chatbot'
 
 const Community = () => {
     const [communities, setCommunities] = useState([])
@@ -148,6 +149,7 @@ const Community = () => {
     return (
         <div className="min-h-screen bg-gray-900">
             <Navbar />
+            <Chatbot/>
             <div className="container mx-auto px-4 py-8">
                 <div className="max-w-7xl mx-auto">
                     <div className="flex justify-between items-center mb-8">

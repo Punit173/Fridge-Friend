@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import Spline from "@splinetool/react-spline";
 import Navbar from "./Navbar";
 import { generateResponse } from "../config/gemini";
+import Chatbot from "./Chatbot";
 
 const Kitchen = () => {
     const [searchQuery, setSearchQuery] = useState("");
@@ -32,6 +33,7 @@ const Kitchen = () => {
     return (
         <>
             <Navbar />
+            <Chatbot/>
             <div className="min-h-screen bg-gray-900 p-4">
                 <div className="max-w-4xl mx-auto">
                     <form onSubmit={handleSearch} className="mb-6">

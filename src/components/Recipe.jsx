@@ -4,6 +4,7 @@ import { generateResponse } from '../config/gemini'
 import ReactMarkdown from 'react-markdown'
 import image from '../assets/images.jpg'
 import { supabase } from './supabase'
+import Chatbot from './Chatbot'
 
 const Recipe = () => {
   const [recipeQuery, setRecipeQuery] = useState('')
@@ -169,12 +170,13 @@ const Recipe = () => {
   return (
     <div className="min-h-screen bg-gray-900">
       <Navbar />
+      <Chatbot/>
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-3xl mx-auto">
           <h1 className="text-3xl font-bold text-center mb-8 text-white">Recipe Generator</h1>
 
           <form onSubmit={handleSubmit} className="mb-8">
-            <div className="flex gap-4">
+            <div className="flex flex-wrap content-center justify-center gap-4">
               <input
                 type="text"
                 value={recipeQuery}
