@@ -605,11 +605,11 @@ const Dashboard = () => {
       spoilageLevel = 'Spoiled'
       shelfLifeReduction = 0.8 // Reduce shelf life by 80%
     } else if (spoilagePercentage > 15) {
-      spoilageLevel = 'Starting to Spoil'
-      shelfLifeReduction = 0.5 // Reduce shelf life by 50%
+      spoilageLevel = 'Spoiled'
+      shelfLifeReduction = 0.8 // Reduce shelf life by 50%
     } else if (spoilagePercentage > 5) {
-      spoilageLevel = 'Slightly Spoiled'
-      shelfLifeReduction = 0.2 // Reduce shelf life by 20%
+      spoilageLevel = 'Spoiled'
+      shelfLifeReduction = 0.8 // Reduce shelf life by 20%
     }
 
     return {
@@ -864,7 +864,7 @@ const Dashboard = () => {
         </div>
       `;
   
-      const response = await fetch('http://localhost:5000/send-email', {
+      const response = await fetch('https://dayzero-backend.onrender.com/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -930,7 +930,7 @@ const Dashboard = () => {
       `;
   
       // Send the email
-      const response = await fetch('http://localhost:5000/send-email', {
+      const response = await fetch('https://dayzero-backend.onrender.com/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1648,6 +1648,7 @@ const Dashboard = () => {
                   Stop Camera
                 </button>
               )}
+          
               <button
                 onClick={() => {
                   stopCamera()

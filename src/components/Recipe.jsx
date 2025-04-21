@@ -1,7 +1,9 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Navbar from './Navbar'
 import { generateResponse } from '../config/gemini'
 import ReactMarkdown from 'react-markdown'
+import image from '../assets/images.jpg'
+import { supabase } from './supabase'
 
 const Recipe = () => {
   const [recipeQuery, setRecipeQuery] = useState('')
@@ -9,6 +11,40 @@ const Recipe = () => {
   const [videoUrl, setVideoUrl] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [inventory, setInventory] = useState([])
+  const [missingIngredients, setMissingIngredients] = useState([])
+  const [blinkitProducts, setBlinkitProducts] = useState([])
+
+  // Common pantry items that are typically always available
+  const commonPantryItems = [
+    'salt', 'sugar', 'pepper', 'oil', 'water', 'flour', 'baking powder',
+    'baking soda', 'vinegar', 'soy sauce', 'ketchup', 'mustard', 'honey',
+    'butter', 'garlic', 'onion', 'ginger', 'chili powder', 'turmeric',
+    'cumin', 'coriander', 'paprika', 'oregano', 'basil', 'thyme', 'rosemary',
+    'cinnamon', 'nutmeg', 'vanilla extract', 'lemon juice', 'lime juice',
+    'rice', 'pasta', 'bread', 'milk', 'eggs', 'cheese', 'yogurt'
+  ]
+
+  useEffect(() => {
+    fetchInventory()
+  }, [])
+
+  const fetchInventory = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('Product Data')
+        .select('*')
+        .eq('user_id', user.id)
+
+      if (error) throw error
+      setInventory(data || [])
+    } catch (err) {
+      console.error('Error fetching inventory:', err)
+    }
+  }
 
   const extractVideoId = (url) => {
     if (!url) return '';
@@ -17,9 +53,60 @@ const Recipe = () => {
       return url;
     }
 
+    // Extract video ID from URL
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
     return (match && match[2].length === 11) ? match[2] : '';
+  }
+
+  const findMissingIngredients = (recipeText) => {
+    const ingredientsSection = recipeText.split('## Instructions')[0]
+    const ingredients = ingredientsSection
+      .split('\n')
+      .filter(line => line.trim() && line.includes('-'))
+      .map(line => line.replace('-', '').trim().toLowerCase())
+
+    const missing = ingredients.filter(ingredient => {
+      // Check if it's a common pantry item
+      const isCommonPantryItem = commonPantryItems.some(item =>
+        ingredient.includes(item) || item.includes(ingredient)
+      )
+
+      if (isCommonPantryItem) return false
+
+      // Check if it's in inventory
+      return !inventory.some(item =>
+        item.product_name.toLowerCase().includes(ingredient) ||
+        ingredient.includes(item.product_name.toLowerCase())
+      )
+    })
+
+    setMissingIngredients(missing)
+    return missing
+  }
+
+  const searchBlinkitProducts = async (ingredients) => {
+    const products = []
+    for (const ingredient of ingredients) {
+      try {
+        // Create a Google search URL for the ingredient
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(ingredient + ' buy online india')}`
+
+        // Generate a random delivery time between 10-30 minutes
+        const deliveryTime = Math.floor(Math.random() * 21) + 10 // Random number between 10-30
+
+        products.push({
+          ingredient,
+          searchUrl,
+          deliveryTime,
+          // Use a placeholder image or ingredient icon
+          image: `https://source.unsplash.com/200x200/?${encodeURIComponent(ingredient)}`
+        })
+      } catch (err) {
+        console.error(`Error creating search link for ${ingredient}:`, err)
+      }
+    }
+    setBlinkitProducts(products)
   }
 
   const handleSubmit = async (e) => {
@@ -30,20 +117,39 @@ const Recipe = () => {
     setError('')
     setRecipe('')
     setVideoUrl('')
+    setMissingIngredients([])
+    setBlinkitProducts([])
 
     try {
-      const recipePrompt = `You are a professional chef. Please provide a detailed recipe for: ${recipeQuery}. Include the following sections in markdown format:
+      // Create a list of available ingredients
+      const availableIngredients = inventory.map(item => item.product_name).join(', ')
+
+      // First, get the recipe
+      const recipePrompt = `You are a professional chef. I want to make: ${recipeQuery}. 
+      
+      Here are the ingredients I currently have in my inventory:
+      ${availableIngredients}
+      
+      Please provide a detailed recipe that uses as many of my available ingredients as possible. If some ingredients are missing, suggest alternatives or mark them as optional. Include the following sections in markdown format:
       1. Ingredients (with measurements)
       2. Instructions (step by step)
       3. Cooking time
       4. Serving size
       5. Tips and variations (if any)
+      6. Note which ingredients from my inventory are being used and which ones need to be purchased
       
       Format the response in proper markdown with appropriate headings and lists.`
 
       const recipeResult = await generateResponse(recipePrompt)
       setRecipe(recipeResult)
 
+      // Find missing ingredients
+      const missing = findMissingIngredients(recipeResult)
+      if (missing.length > 0) {
+        await searchBlinkitProducts(missing)
+      }
+
+      // Then, get a relevant YouTube video URL
       const videoPrompt = `For the recipe "${recipeQuery}", provide a full YouTube URL of a good tutorial video. 
       The URL should be in the format: https://www.youtube.com/watch?v=VIDEO_ID or https://youtu.be/VIDEO_ID.
       Return ONLY the URL, nothing else.`
@@ -112,6 +218,38 @@ const Recipe = () => {
               <div className="prose max-w-none bg-gray-800 p-6 rounded-lg shadow-lg text-gray-300">
                 <ReactMarkdown>{recipe}</ReactMarkdown>
               </div>
+
+              {missingIngredients.length > 0 && (
+                <div className="bg-gray-800 p-6 rounded-lg shadow-lg flex flex-col content-center items-center">
+                  <h2 className="text-2xl font-bold mb-4 text-white">Any Missing Ingredient?</h2>
+                  <div className=" gap-4">
+                    {/* {blinkitProducts.map((item, index) => ( */}
+                      <div className="bg-gray-700 p-4 rounded-lg">
+                        <h3 className="text-lg font-semibold text-white mb-2">Order Now</h3>
+                        <img
+                          src={image}
+                          alt="blinkit"
+                          className="w-full h-32 object-cover rounded-lg mb-2"
+                        />
+                        <div className="flex items-center text-green-400 mb-2">
+                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span>Estimated delivery: Few minutes</span>
+                        </div>
+                        <a
+                          href="https://blinkit.com/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block w-full text-center bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          Search Online
+                        </a>
+                      </div>
+                    {/* ))} */}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
