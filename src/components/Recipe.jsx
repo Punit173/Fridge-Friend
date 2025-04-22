@@ -128,18 +128,44 @@ const Recipe = () => {
       // First, get the recipe
       const recipePrompt = `You are a professional chef. I want to make: ${recipeQuery}. 
       
+      This recipe will be displayed in markdown editor. Make it visually appealing and attractive using:
+      - 🎨 Emojis for each section and ingredients
+      - 📝 Clear hierarchical headings (H1, H2, H3)
+      - 📋 Well-formatted bullet points and numbered lists
+      - 💡 Tips in blockquotes
+      - ⏱️ Time and servings in bold
+      - 🥘 Ingredients with checkboxes
+      - 🔍 Important notes in italics
+      
       Here are the ingredients I currently have in my inventory:
       ${availableIngredients}
       
       Please provide a detailed recipe that uses as many of my available ingredients as possible. If some ingredients are missing, suggest alternatives or mark them as optional. Include the following sections in markdown format:
-      1. Note which ingredients from my inventory are being used and which ones need to be purchased
-      2. Ingredients (with measurements)
-      3. Instructions (step by step)
-      4. Cooking time
-      5. Serving size
-      6. Tips and variations (if any)
       
-      Format the response in proper markdown with appropriate headings and lists. Don't provide any dump to this just answer whatever is asked, make it more designer in markdown don't write "This recipe focuses on using the orange and sugar you already have to create a flavorful simple syrup that elevates a basic cake. Since you're missing key cake ingredients, we'll treat this as a starting point and outline what you'll need to purchase......"`
+      # 🍳 [Recipe Name]
+      
+      ## 📋 Quick Info
+      - ⏱️ **Prep Time**: [time]
+      - 🔥 **Cook Time**: [time]
+      - 👥 **Servings**: [number]
+      - 🎯 **Difficulty**: [Easy/Medium/Hard]
+      
+      ## 🛒 Ingredients
+      ### Available Ingredients
+      - [ ] [ingredient] - ✅ (in your inventory)
+      
+      ### Missing Ingredients
+      - [ ] [ingredient] - ❌ (need to purchase)
+      
+      ## 👩‍🍳 Instructions
+      1. [Step 1]
+      2. [Step 2]
+      ...
+      
+      ## 💡 Tips & Notes
+      > [Important tips and variations]
+      
+      Format the response in proper markdown with appropriate headings and lists. Make it visually appealing and easy to read.`
 
       const recipeResult = await generateResponse(recipePrompt)
       setRecipe(recipeResult)
@@ -170,7 +196,7 @@ const Recipe = () => {
   return (
     <div className="min-h-screen bg-gray-900">
       <Navbar />
-      <Chatbot/>
+      <Chatbot />
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-3xl mx-auto">
           <h1 className="text-3xl font-bold text-center mb-8 text-white">Recipe Generator</h1>
@@ -217,8 +243,23 @@ const Recipe = () => {
                 </div>
               )} */}
 
-              <div className="prose max-w-none bg-gray-800 p-6 rounded-lg shadow-lg text-gray-300">
-                <ReactMarkdown>{recipe}</ReactMarkdown>
+              <div className="prose prose-invert max-w-none bg-gray-800 p-6 rounded-lg shadow-lg text-gray-300 overflow-auto">
+                <div className="max-h-[800px] overflow-y-auto">
+                  <ReactMarkdown
+                    components={{
+                      h1: ({ node, ...props }) => <h1 className="text-3xl font-bold mb-4 text-white" {...props} />,
+                      h2: ({ node, ...props }) => <h2 className="text-2xl font-semibold mb-3 text-white" {...props} />,
+                      h3: ({ node, ...props }) => <h3 className="text-xl font-medium mb-2 text-white" {...props} />,
+                      ul: ({ node, ...props }) => <ul className="list-disc pl-4 mb-4" {...props} />,
+                      ol: ({ node, ...props }) => <ol className="list-decimal pl-4 mb-4" {...props} />,
+                      li: ({ node, ...props }) => <li className="mb-2" {...props} />,
+                      blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-blue-500 pl-4 italic my-4" {...props} />,
+                      p: ({ node, ...props }) => <p className="mb-4" {...props} />
+                    }}
+                  >
+                    {recipe}
+                  </ReactMarkdown>
+                </div>
               </div>
 
               {missingIngredients.length > 0 && (
@@ -226,28 +267,28 @@ const Recipe = () => {
                   <h2 className="text-2xl font-bold mb-4 text-white">Any Missing Ingredient?</h2>
                   <div className=" gap-4">
                     {/* {blinkitProducts.map((item, index) => ( */}
-                      <div className="bg-gray-700 p-4 rounded-lg">
-                        <h3 className="text-lg font-semibold text-white mb-2">Order Now</h3>
-                        <img
-                          src={image}
-                          alt="blinkit"
-                          className="w-full h-32 object-cover rounded-lg mb-2"
-                        />
-                        <div className="flex items-center text-green-400 mb-2">
-                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span>Estimated delivery: Few minutes</span>
-                        </div>
-                        <a
-                          href="https://blinkit.com/"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block w-full text-center bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                          Search Online
-                        </a>
+                    <div className="bg-gray-700 p-4 rounded-lg">
+                      <h3 className="text-lg font-semibold text-white mb-2">Order Now</h3>
+                      <img
+                        src={image}
+                        alt="blinkit"
+                        className="w-full h-32 object-cover rounded-lg mb-2"
+                      />
+                      <div className="flex items-center text-green-400 mb-2">
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Estimated delivery: Few minutes</span>
                       </div>
+                      <a
+                        href="https://blinkit.com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block w-full text-center bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Search Online
+                      </a>
+                    </div>
                     {/* ))} */}
                   </div>
                 </div>
