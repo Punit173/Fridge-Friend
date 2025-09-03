@@ -40,7 +40,7 @@ const Navbar = () => {
           <div className="flex items-center">
             <img src={logo} className='w-10 mt-1' alt="" />
             <Link to="/" className={`text-2xl font-bold ${isAuthenticated ? 'text-white' : 'text-gray-800'}`}>
-              FridgeFriend
+              SmartShelf
             </Link>
           </div>
 
