@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { supabase } from "./supabase.js";
 import { useNavigate } from "react-router-dom";
+import { enableDemoMode, disableDemoMode } from "../data/demoData";
 
 const Login = () => {
     const [email, setEmail] = useState("");
@@ -8,6 +9,10 @@ const Login = () => {
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
+
+    // Demo credentials
+    const DEMO_EMAIL = "demo@fridgefriend.com";
+    const DEMO_PASSWORD = "demo123456";
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -27,6 +32,37 @@ const Login = () => {
             }
         } catch (err) {
             setError("An unexpected error occurred. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleDemoLogin = async () => {
+        setEmail(DEMO_EMAIL);
+        setPassword(DEMO_PASSWORD);
+        setError("");
+        setIsLoading(true);
+
+        try {
+            // Try to login with real credentials first
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: DEMO_EMAIL,
+                password: DEMO_PASSWORD,
+            });
+
+            if (error) {
+                // If real login fails, enable demo mode (simulated offline mode)
+                enableDemoMode();
+                navigate("/dashboard");
+            } else {
+                // If login succeeds, disable demo mode to use real database
+                disableDemoMode();
+                navigate("/dashboard");
+            }
+        } catch (err) {
+            // On any error, enable demo mode for seamless experience
+            enableDemoMode();
+            navigate("/dashboard");
         } finally {
             setIsLoading(false);
         }
@@ -126,6 +162,15 @@ const Login = () => {
                                 ) : (
                                     "Sign In"
                                 )}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleDemoLogin}
+                                disabled={isLoading}
+                                className="w-full py-3 px-4 bg-emerald-700/50 border border-emerald-500 text-emerald-300 font-medium rounded-lg hover:bg-emerald-700/70 hover:text-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isLoading ? "Loading..." : "Demo Login"}
                             </button>
                         </form>
 

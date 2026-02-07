@@ -1,7 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Initialize the Gemini API
-const genAI = new GoogleGenerativeAI("AIzaSyCJ9B9D93cw0ZPIakN5kQpT0IIkI5VOZwI");
+const genAI = new GoogleGenerativeAI("AIzaSyC9oFpzScVaBy24p3Gki4lwu0vHmTqKCdc");
 
 export const generateResponse = async (prompt) => {
     try {

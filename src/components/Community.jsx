@@ -3,6 +3,7 @@ import Navbar from './Navbar'
 import { supabase } from './supabase'
 import { FaUsers, FaLeaf, FaChartLine, FaPlus, FaCheck, FaTimes } from 'react-icons/fa'
 import Chatbot from './Chatbot'
+import { isDemoMode, demoData } from '../data/demoData'
 
 const Community = () => {
     const [communities, setCommunities] = useState([])
@@ -22,6 +23,35 @@ const Community = () => {
 
     const fetchCommunities = async () => {
         try {
+            // If in demo mode, use demo data
+            if (isDemoMode()) {
+                setCommunities([
+                    {
+                        id: 1,
+                        name: 'Fresh Food Enthusiasts',
+                        description: 'A community for people who love fresh, healthy food',
+                        member_count: 324,
+                        food_saved_kg: 1250
+                    },
+                    {
+                        id: 2,
+                        name: 'Zero Waste Kitchen',
+                        description: 'Learn how to reduce food waste in your kitchen',
+                        member_count: 567,
+                        food_saved_kg: 3420
+                    },
+                    {
+                        id: 3,
+                        name: 'Budget Cooking',
+                        description: 'Share recipes and tips for cooking on a budget',
+                        member_count: 456,
+                        food_saved_kg: 2100
+                    }
+                ])
+                setLoading(false)
+                return
+            }
+
             const { data, error } = await supabase
                 .from('communities')
                 .select('*')
@@ -30,6 +60,23 @@ const Community = () => {
         } catch (err) {
             setError('Failed to fetch communities')
             console.error(err)
+            // Fallback to demo data
+            setCommunities([
+                {
+                    id: 1,
+                    name: 'Fresh Food Enthusiasts',
+                    description: 'A community for people who love fresh, healthy food',
+                    member_count: 324,
+                    food_saved_kg: 1250
+                },
+                {
+                    id: 2,
+                    name: 'Zero Waste Kitchen',
+                    description: 'Learn how to reduce food waste in your kitchen',
+                    member_count: 567,
+                    food_saved_kg: 3420
+                }
+            ])
         } finally {
             setLoading(false)
         }

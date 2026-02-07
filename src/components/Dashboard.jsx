@@ -11,8 +11,7 @@ import { useNavigate } from 'react-router-dom'
 import Chatbot from './Chatbot'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
-// import * as jsPDF from 'jspdf' 
-// import * as {autoTable} from 'jspdf-autotable'
+import { isDemoMode, demoData } from '../data/demoData'
 
 const Dashboard = () => {
   const navigate = useNavigate()
@@ -381,6 +380,18 @@ const Dashboard = () => {
 
   const fetchPurchases = async () => {
     try {
+      // If in demo mode, use demo data
+      if (isDemoMode()) {
+        const formattedData = demoData.products.map(item => ({
+          ...item,
+          remaining_days: differenceInDays(new Date(item.expiry_date), new Date()),
+          formatted_expiry: format(new Date(item.expiry_date), 'MMM dd, yyyy')
+        }))
+        setPurchases(formattedData)
+        setLoading(false)
+        return
+      }
+
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         setLoading(false)
@@ -405,6 +416,13 @@ const Dashboard = () => {
       setLoading(false)
     } catch (error) {
       console.error('Error fetching purchases:', error.message)
+      // Fallback to demo data on error
+      const formattedData = demoData.products.map(item => ({
+        ...item,
+        remaining_days: differenceInDays(new Date(item.expiry_date), new Date()),
+        formatted_expiry: format(new Date(item.expiry_date), 'MMM dd, yyyy')
+      }))
+      setPurchases(formattedData)
       setLoading(false)
     }
   }

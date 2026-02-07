@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown'
 import image from '../assets/images.jpg'
 import { supabase } from './supabase'
 import Chatbot from './Chatbot'
+import { isDemoMode, demoData } from '../data/demoData'
 
 const Recipe = () => {
   const [recipeQuery, setRecipeQuery] = useState('')
@@ -32,6 +33,12 @@ const Recipe = () => {
 
   const fetchInventory = async () => {
     try {
+      // If in demo mode, use demo data
+      if (isDemoMode()) {
+        setInventory(demoData.products || [])
+        return
+      }
+
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
@@ -44,6 +51,8 @@ const Recipe = () => {
       setInventory(data || [])
     } catch (err) {
       console.error('Error fetching inventory:', err)
+      // Fallback to demo data
+      setInventory(demoData.products || [])
     }
   }
 

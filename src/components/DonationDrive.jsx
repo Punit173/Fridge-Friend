@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import { supabase } from './supabase'
 import Chatbot from './Chatbot'
+import { isDemoMode, demoData } from '../data/demoData'
 
 // Fix for default marker icons in Leaflet
 delete L.Icon.Default.prototype._getIconUrl
@@ -61,6 +62,17 @@ const DonationDrive = () => {
 
   const fetchCommunities = async () => {
     try {
+      // If in demo mode, use demo communities
+      if (isDemoMode()) {
+        setCommunities([
+          { id: 1, name: 'Fresh Food Enthusiasts', member_count: 324 },
+          { id: 2, name: 'Zero Waste Kitchen', member_count: 567 },
+          { id: 3, name: 'Budget Cooking', member_count: 456 }
+        ])
+        setLoading(false)
+        return
+      }
+
       const { data, error } = await supabase
         .from('communities')
         .select('*')
@@ -68,6 +80,11 @@ const DonationDrive = () => {
       setCommunities(data || [])
     } catch (err) {
       console.error('Error fetching communities:', err)
+      // Fallback to demo data
+      setCommunities([
+        { id: 1, name: 'Fresh Food Enthusiasts', member_count: 324 },
+        { id: 2, name: 'Zero Waste Kitchen', member_count: 567 }
+      ])
     } finally {
       setLoading(false)
     }

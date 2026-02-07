@@ -2,15 +2,22 @@ import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from './supabase'
 import logo from '../assets/Group 3.png'
+import { isDemoMode, disableDemoMode } from '../data/demoData'
 
 const Navbar = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(isDemoMode())
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
     // Check authentication status on mount
     const checkAuth = async () => {
+      // If in demo mode, always show as authenticated
+      if (isDemoMode()) {
+        setIsAuthenticated(true)
+        return
+      }
+
       const { data: { session } } = await supabase.auth.getSession()
       setIsAuthenticated(!!session)
     }
@@ -18,13 +25,25 @@ const Navbar = () => {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(!!session)
+      if (isDemoMode()) {
+        setIsAuthenticated(true)
+      } else {
+        setIsAuthenticated(!!session)
+      }
     })
 
     return () => subscription.unsubscribe()
   }, [])
 
   const handleLogout = async () => {
+    // If in demo mode, disable demo mode and redirect
+    if (isDemoMode()) {
+      disableDemoMode()
+      setIsAuthenticated(false)
+      navigate('/login')
+      return
+    }
+
     await supabase.auth.signOut()
     navigate('/login')
   }
@@ -40,7 +59,7 @@ const Navbar = () => {
           <div className="flex items-center">
             <img src={logo} className='w-10 mt-1' alt="" />
             <Link to="/" className={`text-2xl font-bold ${isAuthenticated ? 'text-white' : 'text-gray-800'}`}>
-              FridgeFriend
+              SmartShelf
             </Link>
           </div>
 
